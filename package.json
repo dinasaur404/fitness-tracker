@@ -1,0 +1,54 @@
+{
+  "name": "gains-goblin",
+  "version": "1.0.0",
+  "description": "AI-powered fitness & nutrition tracker built on Cloudflare",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "wrangler dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "db:create": "wrangler d1 create gains-goblin-db",
+    "db:migrate": "wrangler d1 execute gains-goblin-db --local --file=./db/schema.sql",
+    "db:migrate:prod": "wrangler d1 execute gains-goblin-db --file=./db/schema.sql",
+    "r2:create": "wrangler r2 bucket create gains-goblin-photos",
+    "kv:create:sessions": "wrangler kv namespace create SESSIONS",
+    "kv:create:cache": "wrangler kv namespace create CACHE",
+    "vectorize:create": "wrangler vectorize create food-embeddings --dimensions=768 --metric=cosine",
+    "queues:create": "wrangler queues create whoop-sync-queue && wrangler queues create photo-analysis-queue",
+    "typecheck": "tsc --noEmit",
+    "setup": "npm run db:create && npm run r2:create && npm run kv:create:sessions && npm run kv:create:cache && npm run vectorize:create && npm run queues:create"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "fitness",
+    "nutrition",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.2",
+    "@hono/zod-validator": "^0.7.6",
+    "agents": "^0.3.3",
+    "ai": "^6.0.6",
+    "capnweb": "^0.4.0",
+    "hono": "^4.11.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@cloudflare/puppeteer": "^1.0.4",
+    "@cloudflare/workers-types": "^4.20260101.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "wrangler": "^4.54.0"
+  }
+}

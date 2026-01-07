@@ -1,0 +1,158 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gains-goblin",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // Smart Placement - Run Worker closer to D1 database for better latency
+  // Since we do many D1 queries, this reduces round-trip time significantly
+  "placement": {
+    "mode": "smart"
+  },
+  
+  // TODO: Add worker_loaders for Code Mode once DO support is ready
+  // "worker_loaders": [{ "binding": "LOADER" }],
+
+  // D1 Database - Main data store (historical data, user accounts)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gains-goblin-db",
+      "database_id": "0b96dad8-7d44-4b69-a75f-ff99b093cb59"
+    }
+  ],
+
+  // R2 Bucket - Photo storage
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "gains-goblin-photos"
+    }
+  ],
+
+  // KV Namespace - Sessions & caching
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "3c9465b1cbad4994a8bd418a52c6def0"
+    },
+    {
+      "binding": "CACHE",
+      "id": "46f0dda8432e4b2daa33552f5d53ba5d"
+    }
+  ],
+
+  // Workers AI - Vision & LLM (for embeddings only, LLM via AI Gateway)
+  "ai": {
+    "binding": "AI"
+  },
+
+  // Vectorize - Semantic food search
+  "vectorize": [
+    {
+      "binding": "FOOD_INDEX",
+      "index_name": "food-embeddings"
+    }
+  ],
+
+  // Browser Rendering - For scraping recipe websites
+  "browser": {
+    "binding": "BROWSER"
+  },
+
+  // Analytics Engine - Custom metrics
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "gains-goblin-metrics"
+    }
+  ],
+
+  // Durable Objects - UserAgent (Agents SDK) + legacy DOs for migration
+  "durable_objects": {
+    "bindings": [
+      // New: UserAgent using Cloudflare Agents SDK
+      // One agent per user - handles meals, workouts, habits, streaks, scheduling
+      {
+        "name": "USER_AGENT",
+        "class_name": "UserAgent"
+      },
+      // ChatAgent - AI fitness coach chat with tool calls
+      {
+        "name": "CHAT_AGENT",
+        "class_name": "ChatAgent"
+      },
+      // Legacy: Keep for data migration, will be removed in v4
+      {
+        "name": "DAILY_TRACKER",
+        "class_name": "DailyTracker"
+      },
+      {
+        "name": "STREAK_MANAGER",
+        "class_name": "StreakManager"
+      },
+      {
+        "name": "DAILY_TRACKER_V2",
+        "class_name": "DailyTrackerV2"
+      },
+      {
+        "name": "STREAK_MANAGER_V2",
+        "class_name": "StreakManagerV2"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["DailyTracker", "StreakManager"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["DailyTrackerV2", "StreakManagerV2"]
+    },
+    {
+      // v3: Add UserAgent with SQLite storage (Agents SDK)
+      // Agent handles: meals, workouts, habits, streaks, Whoop sync scheduling
+      "tag": "v3",
+      "new_sqlite_classes": ["UserAgent"]
+    },
+    {
+      // v4: Add ChatAgent with SQLite storage for chat history
+      "tag": "v4",
+      "new_sqlite_classes": ["ChatAgent"]
+    }
+  ],
+
+  // TODO: Add service bindings for Code Mode once DO support is ready
+  // "services": [{ "binding": "SELF", "service": "gains-goblin" }],
+  
+  // Environment variables
+  "vars": {
+    "WHOOP_CLIENT_ID": "ceae83bf-7b41-4cb9-a1ec-2dfdc521c76b"
+  },
+
+  // Hourly cron for Whoop token refresh & data sync
+  // Tokens expire in 1 hour, so we refresh proactively before expiration
+  // Agent also schedules its own refresh, this is a backup
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  },
+
+  // Assets for the frontend
+  // In production, serve from ./dist (Vite build output)
+  // In dev, use Vite dev server which proxies to wrangler
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+
+  // Observability - Enable Workers Logs
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
