@@ -27,6 +27,7 @@ type RepoEvent = {
 	checkout: Output;
 };
 
+const broken = ;
 const NO_RETRIES = { retries: { limit: 0, delay: "1 second" } } as const;
 const NPM = { NPM_CONFIG_UPDATE_NOTIFIER: "false" };
 
