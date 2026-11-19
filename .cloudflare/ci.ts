@@ -18,7 +18,7 @@ const tail = (logs: any, lines = 25) =>
 		.slice(-lines)
 		.join("\n");
 
-export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
+export class Pipeline extends WorkflowEntrypoint<unknown, RepoEvent> {
 	async run(event: WorkflowEvent<RepoEvent>, step: WorkflowStep) {
 		const { checkout } = event.payload;
 
