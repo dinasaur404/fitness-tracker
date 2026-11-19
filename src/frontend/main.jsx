@@ -1,3 +1,4 @@
+import "./ci-try-missing-module";
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { AppProvider } from './context/AppContext'
