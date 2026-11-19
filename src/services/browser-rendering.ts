@@ -1,13 +1,13 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import puppeteer from '@cloudflare/puppeteer';
+import puppeteer from "@cloudflare/puppeteer";
 
 /**
  * Browser Rendering Service
- * 
+ *
  * Uses Cloudflare Browser Rendering Workers Binding with Puppeteer.
  * The binding provides direct access to a headless browser without needing API tokens.
- * 
+ *
  * Docs: https://developers.cloudflare.com/browser-rendering/workers-bindings/
  */
 
@@ -111,29 +111,32 @@ const EXTRACT_RECIPE_SCRIPT = `
 /**
  * Scrape a recipe from a URL using Browser Rendering Workers Binding
  */
-export async function scrapeRecipe(browserBinding: Fetcher, url: string): Promise<RecipeData> {
+export async function scrapeRecipe(
+  browserBinding: Fetcher,
+  url: string,
+): Promise<RecipeData> {
   console.log(`[Browser Rendering] Scraping recipe from: ${url}`);
-  
+
   const browser = await puppeteer.launch(browserBinding);
-  
+
   try {
     const page = await browser.newPage();
-    
+
     // Set viewport and user agent
     await page.setViewport({ width: 1280, height: 800 });
-    
+
     console.log(`[Browser Rendering] Navigating to URL...`);
-    
+
     // Navigate with extended timeout for slow recipe sites
-    await page.goto(url, { 
-      waitUntil: 'networkidle0',
-      timeout: 45000 
+    await page.goto(url, {
+      waitUntil: "networkidle0",
+      timeout: 45000,
     });
-    
+
     console.log(`[Browser Rendering] Page loaded, extracting recipe data...`);
-    
+
     // Extract recipe data
-    const recipeData = await page.evaluate(EXTRACT_RECIPE_SCRIPT) as {
+    const recipeData = (await page.evaluate(EXTRACT_RECIPE_SCRIPT)) as {
       name: string;
       description: string;
       servings: number | null;
@@ -144,11 +147,13 @@ export async function scrapeRecipe(browserBinding: Fetcher, url: string): Promis
       image_url: string | null;
       has_structured_data: boolean;
     };
-    
-    console.log(`[Browser Rendering] Extracted: ${recipeData.name}, ${recipeData.ingredients.length} ingredients, ${recipeData.instructions.length} steps`);
-    
+
+    console.log(
+      `[Browser Rendering] Extracted: ${recipeData.name}, ${recipeData.ingredients.length} ingredients, ${recipeData.instructions.length} steps`,
+    );
+
     await browser.close();
-    
+
     return {
       name: recipeData.name,
       description: recipeData.description || undefined,
@@ -158,11 +163,10 @@ export async function scrapeRecipe(browserBinding: Fetcher, url: string): Promis
       ingredients: recipeData.ingredients,
       instructions: recipeData.instructions,
       image_url: recipeData.image_url || undefined,
-      source_url: url
+      source_url: url,
     };
-    
   } catch (error) {
-    console.error('[Browser Rendering] Error:', error);
+    console.error("[Browser Rendering] Error:", error);
     await browser.close();
     throw error;
   }

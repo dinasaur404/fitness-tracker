@@ -9,9 +9,9 @@ export default function LoadingScreen() {
           <span className="text-gray-600 blink">_</span>
         </div>
         <div className="mt-6 w-64 mx-auto h-2 bg-white border-2 border-[#2D2D2D] rounded-full overflow-hidden">
-          <div className="xp-fill h-full" style={{ width: '60%' }}></div>
+          <div className="xp-fill h-full" style={{ width: "60%" }}></div>
         </div>
       </div>
     </div>
-  )
+  );
 }

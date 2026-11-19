@@ -1,37 +1,37 @@
-import { Component } from 'react'
+import { Component } from "react";
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
-    super(props)
-    this.state = { hasError: false, error: null, errorInfo: null }
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error }
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    this.setState({ errorInfo })
+    this.setState({ errorInfo });
     // Log to console in development
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
-    
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+
     // In production, you could send this to an error tracking service
     // e.g., Sentry, LogRocket, etc.
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null })
-  }
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  };
 
   handleRefresh = () => {
-    window.location.reload()
-  }
+    window.location.reload();
+  };
 
   render() {
     if (this.state.hasError) {
       // Custom fallback UI
       if (this.props.fallback) {
-        return this.props.fallback
+        return this.props.fallback;
       }
 
       return (
@@ -40,10 +40,11 @@ export default class ErrorBoundary extends Component {
             <div className="text-5xl mb-4">😵</div>
             <h1 className="font-display text-xl mb-2">SOMETHING WENT WRONG</h1>
             <p className="text-sm text-gray-600 mb-4">
-              The app encountered an unexpected error. Don't worry, your data is safe.
+              The app encountered an unexpected error. Don't worry, your data is
+              safe.
             </p>
-            
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+
+            {process.env.NODE_ENV === "development" && this.state.error && (
               <details className="text-left mb-4 p-3 bg-red-50 border border-red-200 text-xs">
                 <summary className="cursor-pointer font-medium text-red-700">
                   Error Details
@@ -54,7 +55,7 @@ export default class ErrorBoundary extends Component {
                 </pre>
               </details>
             )}
-            
+
             <div className="flex gap-2 justify-center">
               <button
                 onClick={this.handleReset}
@@ -71,9 +72,9 @@ export default class ErrorBoundary extends Component {
             </div>
           </div>
         </div>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
