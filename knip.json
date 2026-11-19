@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["out/**", "public/sw.js", "worker-configuration.d.ts", "src/frontend/components/shared/Badge.jsx"],
+  "ignoreDependencies": ["@hono/zod-validator"],
+  "rules": {
+    "exports": "warn",
+    "types": "warn"
+  }
+}
