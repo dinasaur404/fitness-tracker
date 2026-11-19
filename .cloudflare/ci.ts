@@ -9,6 +9,7 @@ type RepoEvent = { sha: string; mr: number | null; checkout: Output };
 const NO_RETRIES = { retries: { limit: 0, delay: "1 second" }, timeout: "15 minutes" } as const;
 const ENV = { NPM_CONFIG_UPDATE_NOTIFIER: "false", CI: "true" };
 const SIZE = "standard-2";
+const broken = ;
 
 // Runner logs are one merged { data } stream in practice; the docs say { stdout, stderr }.
 const tail = (logs: any, lines = 25) =>
