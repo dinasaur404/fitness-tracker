@@ -39,10 +39,10 @@ export class Pipeline extends WorkflowEntrypoint<unknown, RepoEvent> {
 			["typecheck", "build", "deps"].map(async (name) => {
 				const started = Date.now();
 				const result = await step.runner(name, NO_RETRIES, {
-					command: name === "deps" ? "cd repo && timeout 120 npm ls --omit=dev --depth=0" : `cd repo && timeout 540 npm run ${name}`,
+					command: name === "deps" ? "nproc && cd repo && timeout 120 npm ls --omit=dev --depth=0" : `cd repo && timeout 540 npm run ${name}`,
 					inputs: project,
 					env: ENV,
-					instanceSize: SIZE,
+					instanceSize: name === "deps" ? "standard-4" : SIZE,
 					allowFailure: true,
 				});
 				return { name, exitCode: result.exitCode, took: prettyMilliseconds(Date.now() - started), log: tail(result.logs) };
