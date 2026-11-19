@@ -3,7 +3,6 @@ import {
 	type WorkflowEvent,
 	type WorkflowStep,
 } from "cloudflare:workers";
-import { z } from "zod";
 
 // A runner output. Pass it back as an input, and do not change it.
 type Output = Record<string, unknown>;
@@ -64,9 +63,6 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 			}),
 		);
 
-		return z
-			.object({ passed: z.boolean() })
-			.passthrough()
-			.parse({ passed: checks.every((check) => check.exitCode === 0), package: pkg.name, checks });
+		return { passed: checks.every((check) => check.exitCode === 0), package: pkg.name, checks };
 	}
 }

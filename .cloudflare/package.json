@@ -2,8 +2,5 @@
   "name": "fitness-tracker-ci",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "pretty-ms": "^9.2.0",
-    "zod": "^4.6.7"
-  }
+  "dependencies": { "pretty-ms": "^9.2.0" }
 }
