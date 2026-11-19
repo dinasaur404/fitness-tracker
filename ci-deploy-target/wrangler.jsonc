@@ -1,0 +1,10 @@
+{
+	// ci-try throwaway: deployed by the ci-try-deploy-with-token pipeline. Not the fitness-tracker app.
+	"name": "ci-try-deploy-target",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-01",
+	"account_id": "ede31cad5fa379850e090febbeaba602",
+	"workers_dev": true,
+	"preview_urls": true,
+	"vars": { "BUILD_SHA": "dev" }
+}
