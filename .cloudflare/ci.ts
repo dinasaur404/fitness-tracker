@@ -48,7 +48,7 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 				const result = await step.runner(name, NO_RETRIES, {
 					command:
 						name === "deps"
-							? "git --version && cd repo && npm ls --omit=dev --depth=0"
+							? "git --version && node -v && cd repo && npm ls --omit=dev --depth=0"
 							: `cd repo && npm run ${name}`,
 					image: name === "deps" ? "workflows/node" : undefined,
 					inputs: project,
