@@ -18,7 +18,8 @@
     "vectorize:create": "wrangler vectorize create food-embeddings --dimensions=768 --metric=cosine",
     "queues:create": "wrangler queues create whoop-sync-queue && wrangler queues create photo-analysis-queue",
     "typecheck": "tsc --noEmit",
-    "setup": "npm run db:create && npm run r2:create && npm run kv:create:sessions && npm run kv:create:cache && npm run vectorize:create && npm run queues:create"
+    "setup": "npm run db:create && npm run r2:create && npm run kv:create:sessions && npm run kv:create:cache && npm run vectorize:create && npm run queues:create",
+    "test": "vitest run"
   },
   "keywords": [
     "cloudflare",
@@ -49,6 +50,7 @@
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
+    "vitest": "^4.1.12",
     "wrangler": "^4.54.0"
   }
 }
