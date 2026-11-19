@@ -1,25 +1,25 @@
 const colorClasses = {
-  mint: 'bg-[#A5D6A7]',
-  sky: 'bg-[#90CAF9]',
-  peach: 'bg-[#FFAB91]',
-  lavender: 'bg-[#B39DDB]',
-  blush: 'bg-[#F48FB1]',
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-500',
-  red: 'bg-red-500',
-}
+  mint: "bg-[#A5D6A7]",
+  sky: "bg-[#90CAF9]",
+  peach: "bg-[#FFAB91]",
+  lavender: "bg-[#B39DDB]",
+  blush: "bg-[#F48FB1]",
+  green: "bg-green-500",
+  yellow: "bg-yellow-500",
+  red: "bg-red-500",
+};
 
-export default function ProgressBar({ 
-  value = 0, 
-  max = 100, 
-  color = 'mint',
+export default function ProgressBar({
+  value = 0,
+  max = 100,
+  color = "mint",
   showLabel = false,
-  label = '',
-  className = '',
+  label = "",
+  className = "",
 }) {
-  const percentage = Math.min(100, Math.max(0, (value / max) * 100))
-  const colorClass = colorClasses[color] || colorClasses.mint
-  
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  const colorClass = colorClasses[color] || colorClasses.mint;
+
   return (
     <div className={`w-full ${className}`}>
       {showLabel && (
@@ -29,11 +29,11 @@ export default function ProgressBar({
         </div>
       )}
       <div className="progress-bar">
-        <div 
+        <div
           className={`progress-fill ${colorClass}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
     </div>
-  )
+  );
 }

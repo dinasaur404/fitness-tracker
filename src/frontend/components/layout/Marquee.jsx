@@ -12,5 +12,5 @@ export default function Marquee() {
         <span className="mx-8">STAY CONSISTENT</span>
       </div>
     </div>
-  )
+  );
 }

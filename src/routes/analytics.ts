@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { Hono } from 'hono';
-import { Env } from '../types/env';
+import { Hono } from "hono";
+import { Env } from "../types/env";
 
 export const analyticsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -9,22 +9,23 @@ export const analyticsRoutes = new Hono<{ Bindings: Env }>();
  * Combined historical analytics endpoint
  * Returns all tracked data for a date range: meals, habits, Whoop data, weight
  */
-analyticsRoutes.get('/daily', async (c) => {
-  const userId = c.req.header('X-User-Id');
+analyticsRoutes.get("/daily", async (c) => {
+  const userId = c.req.header("X-User-Id");
   if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const days = parseInt(c.req.query('days') || '30');
+  const days = parseInt(c.req.query("days") || "30");
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split('T')[0];
-  const endDateStr = new Date().toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split("T")[0];
+  const endDateStr = new Date().toISOString().split("T")[0];
 
   // Batch all 4 queries into single round trip (saves ~150-300ms)
   const batchResults = await c.env.DB.batch([
     // 0: Meals aggregated by day
-    c.env.DB.prepare(`
+    c.env.DB.prepare(
+      `
       SELECT 
         date(logged_at) as date,
         COUNT(*) as meal_count,
@@ -35,10 +36,12 @@ analyticsRoutes.get('/daily', async (c) => {
       FROM meals 
       WHERE user_id = ? AND date(logged_at) >= ?
       GROUP BY date(logged_at)
-    `).bind(userId, startDateStr),
+    `,
+    ).bind(userId, startDateStr),
 
     // 1: Daily habits
-    c.env.DB.prepare(`
+    c.env.DB.prepare(
+      `
       SELECT 
         date,
         drinks_count,
@@ -51,10 +54,12 @@ analyticsRoutes.get('/daily', async (c) => {
       FROM daily_habits 
       WHERE user_id = ? AND date >= ?
       ORDER BY date ASC
-    `).bind(userId, startDateStr),
+    `,
+    ).bind(userId, startDateStr),
 
     // 2: Whoop daily data
-    c.env.DB.prepare(`
+    c.env.DB.prepare(
+      `
       SELECT 
         date,
         recovery_score,
@@ -69,10 +74,12 @@ analyticsRoutes.get('/daily', async (c) => {
       FROM whoop_daily 
       WHERE user_id = ? AND date >= ?
       ORDER BY date ASC
-    `).bind(userId, startDateStr),
+    `,
+    ).bind(userId, startDateStr),
 
     // 3: Barry's workouts
-    c.env.DB.prepare(`
+    c.env.DB.prepare(
+      `
       SELECT 
         workout_date as date,
         class_type,
@@ -83,7 +90,8 @@ analyticsRoutes.get('/daily', async (c) => {
       FROM barrys_workouts 
       WHERE user_id = ? AND workout_date >= ?
       ORDER BY workout_date ASC
-    `).bind(userId, startDateStr)
+    `,
+    ).bind(userId, startDateStr),
   ]);
 
   type DbRecord = Record<string, unknown>;
@@ -93,44 +101,49 @@ analyticsRoutes.get('/daily', async (c) => {
   const barrysData = { results: batchResults[3].results as DbRecord[] };
 
   // Merge all data by date
-  const dateMap = new Map<string, {
-    date: string;
-    // Nutrition
-    meal_count?: number;
-    total_calories?: number;
-    total_protein?: number;
-    total_carbs?: number;
-    total_fat?: number;
-    // Habits
-    drinks_count?: number;
-    smoked_weed?: boolean;
-    water_bottles?: number;
-    took_electrolytes?: boolean;
-    steps?: number;
-    mood_rating?: number;
-    energy_rating?: number;
-    // Whoop
-    recovery_score?: number;
-    hrv?: number;
-    resting_heart_rate?: number;
-    sleep_performance?: number;
-    sleep_hours?: number;
-    day_strain?: number;
-    calories_burned?: number;
-    workout_count?: number;
-    weight_kg?: number;
-    weight_lbs?: number;
-    // Barry's
-    did_barrys?: boolean;
-    barrys_class?: string;
-    barrys_double_floor?: boolean;
-  }>();
+  const dateMap = new Map<
+    string,
+    {
+      date: string;
+      // Nutrition
+      meal_count?: number;
+      total_calories?: number;
+      total_protein?: number;
+      total_carbs?: number;
+      total_fat?: number;
+      // Habits
+      drinks_count?: number;
+      smoked_weed?: boolean;
+      water_bottles?: number;
+      took_electrolytes?: boolean;
+      steps?: number;
+      mood_rating?: number;
+      energy_rating?: number;
+      // Whoop
+      recovery_score?: number;
+      hrv?: number;
+      resting_heart_rate?: number;
+      sleep_performance?: number;
+      sleep_hours?: number;
+      day_strain?: number;
+      calories_burned?: number;
+      workout_count?: number;
+      weight_kg?: number;
+      weight_lbs?: number;
+      // Barry's
+      did_barrys?: boolean;
+      barrys_class?: string;
+      barrys_double_floor?: boolean;
+    }
+  >();
 
   // Initialize all dates in range
   const current = new Date(startDateStr);
   const end = new Date(endDateStr);
   while (current <= end) {
-    dateMap.set(current.toISOString().split('T')[0], { date: current.toISOString().split('T')[0] });
+    dateMap.set(current.toISOString().split("T")[0], {
+      date: current.toISOString().split("T")[0],
+    });
     current.setDate(current.getDate() + 1);
   }
 
@@ -144,7 +157,7 @@ analyticsRoutes.get('/daily', async (c) => {
       total_calories: row.total_calories as number,
       total_protein: row.total_protein as number,
       total_carbs: row.total_carbs as number,
-      total_fat: row.total_fat as number
+      total_fat: row.total_fat as number,
     });
   }
 
@@ -160,7 +173,7 @@ analyticsRoutes.get('/daily', async (c) => {
       took_electrolytes: Boolean(row.took_electrolytes),
       steps: row.steps as number,
       mood_rating: row.mood_rating as number,
-      energy_rating: row.energy_rating as number
+      energy_rating: row.energy_rating as number,
     });
   }
 
@@ -175,12 +188,14 @@ analyticsRoutes.get('/daily', async (c) => {
       hrv: row.hrv as number,
       resting_heart_rate: row.resting_heart_rate as number,
       sleep_performance: row.sleep_performance as number,
-      sleep_hours: row.sleep_duration_minutes ? (row.sleep_duration_minutes as number) / 60 : undefined,
+      sleep_hours: row.sleep_duration_minutes
+        ? (row.sleep_duration_minutes as number) / 60
+        : undefined,
       day_strain: row.day_strain as number,
       calories_burned: row.calories_burned as number,
       workout_count: row.workout_count as number,
       weight_kg: weightKg,
-      weight_lbs: weightKg ? Math.round(weightKg * 2.205 * 10) / 10 : undefined
+      weight_lbs: weightKg ? Math.round(weightKg * 2.205 * 10) / 10 : undefined,
     });
   }
 
@@ -192,36 +207,40 @@ analyticsRoutes.get('/daily', async (c) => {
       ...existing,
       did_barrys: true,
       barrys_class: row.class_type as string,
-      barrys_double_floor: Boolean(row.is_double_floor)
+      barrys_double_floor: Boolean(row.is_double_floor),
     });
   }
 
   // Convert to array sorted by date
-  const dailyData = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+  const dailyData = Array.from(dateMap.values()).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
 
   return c.json({
     period: { days, start_date: startDateStr, end_date: endDateStr },
-    daily_data: dailyData
+    daily_data: dailyData,
   });
 });
 
 /**
  * Get summary statistics for a period
  */
-analyticsRoutes.get('/summary', async (c) => {
-  const userId = c.req.header('X-User-Id');
+analyticsRoutes.get("/summary", async (c) => {
+  const userId = c.req.header("X-User-Id");
   if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const days = parseInt(c.req.query('days') || '30');
+  const days = parseInt(c.req.query("days") || "30");
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split("T")[0];
 
-  const [nutritionStats, habitStats, whoopStats, barrysStats] = await Promise.all([
-    // Nutrition averages
-    c.env.DB.prepare(`
+  const [nutritionStats, habitStats, whoopStats, barrysStats] =
+    await Promise.all([
+      // Nutrition averages
+      c.env.DB.prepare(
+        `
       SELECT 
         COUNT(*) as days_logged,
         ROUND(AVG(daily_cal), 0) as avg_calories,
@@ -239,10 +258,14 @@ analyticsRoutes.get('/summary', async (c) => {
         WHERE user_id = ? AND date(logged_at) >= ?
         GROUP BY date(logged_at)
       )
-    `).bind(userId, startDateStr).first(),
+    `,
+      )
+        .bind(userId, startDateStr)
+        .first(),
 
-    // Habit statistics
-    c.env.DB.prepare(`
+      // Habit statistics
+      c.env.DB.prepare(
+        `
       SELECT 
         COUNT(*) as days_tracked,
         SUM(CASE WHEN drinks_count = 0 THEN 1 ELSE 0 END) as alcohol_free_days,
@@ -252,10 +275,14 @@ analyticsRoutes.get('/summary', async (c) => {
         ROUND(AVG(steps), 0) as avg_steps
       FROM daily_habits 
       WHERE user_id = ? AND date >= ?
-    `).bind(userId, startDateStr).first(),
+    `,
+      )
+        .bind(userId, startDateStr)
+        .first(),
 
-    // Whoop statistics
-    c.env.DB.prepare(`
+      // Whoop statistics
+      c.env.DB.prepare(
+        `
       SELECT 
         COUNT(*) as days_with_data,
         ROUND(AVG(recovery_score), 0) as avg_recovery,
@@ -270,10 +297,14 @@ analyticsRoutes.get('/summary', async (c) => {
         MAX(weight_kg) as max_weight_kg
       FROM whoop_daily 
       WHERE user_id = ? AND date >= ?
-    `).bind(userId, startDateStr).first(),
+    `,
+      )
+        .bind(userId, startDateStr)
+        .first(),
 
-    // Barry's statistics
-    c.env.DB.prepare(`
+      // Barry's statistics
+      c.env.DB.prepare(
+        `
       SELECT 
         COUNT(*) as total_classes,
         SUM(CASE WHEN is_double_floor = 1 THEN 1 ELSE 0 END) as double_floor_classes,
@@ -282,34 +313,53 @@ analyticsRoutes.get('/summary', async (c) => {
         ROUND(AVG(duration_minutes), 0) as avg_duration
       FROM barrys_workouts 
       WHERE user_id = ? AND workout_date >= ?
-    `).bind(userId, startDateStr).first()
-  ]);
+    `,
+      )
+        .bind(userId, startDateStr)
+        .first(),
+    ]);
 
   // Calculate weight change
-  const weightStats = whoopStats as { avg_weight_kg?: number; min_weight_kg?: number; max_weight_kg?: number } | null;
+  const weightStats = whoopStats as {
+    avg_weight_kg?: number;
+    min_weight_kg?: number;
+    max_weight_kg?: number;
+  } | null;
   let weightChange = null;
   if (weightStats?.min_weight_kg && weightStats?.max_weight_kg) {
     // Get first and last weight in period
-    const firstWeight = await c.env.DB.prepare(`
+    const firstWeight = (await c.env.DB.prepare(
+      `
       SELECT weight_kg FROM whoop_daily 
       WHERE user_id = ? AND date >= ? AND weight_kg IS NOT NULL
       ORDER BY date ASC LIMIT 1
-    `).bind(userId, startDateStr).first() as { weight_kg: number } | null;
-    
-    const lastWeight = await c.env.DB.prepare(`
+    `,
+    )
+      .bind(userId, startDateStr)
+      .first()) as { weight_kg: number } | null;
+
+    const lastWeight = (await c.env.DB.prepare(
+      `
       SELECT weight_kg FROM whoop_daily 
       WHERE user_id = ? AND date >= ? AND weight_kg IS NOT NULL
       ORDER BY date DESC LIMIT 1
-    `).bind(userId, startDateStr).first() as { weight_kg: number } | null;
+    `,
+    )
+      .bind(userId, startDateStr)
+      .first()) as { weight_kg: number } | null;
 
     if (firstWeight && lastWeight) {
       weightChange = {
         start_kg: firstWeight.weight_kg,
         end_kg: lastWeight.weight_kg,
-        change_kg: Math.round((lastWeight.weight_kg - firstWeight.weight_kg) * 10) / 10,
+        change_kg:
+          Math.round((lastWeight.weight_kg - firstWeight.weight_kg) * 10) / 10,
         start_lbs: Math.round(firstWeight.weight_kg * 2.205 * 10) / 10,
         end_lbs: Math.round(lastWeight.weight_kg * 2.205 * 10) / 10,
-        change_lbs: Math.round((lastWeight.weight_kg - firstWeight.weight_kg) * 2.205 * 10) / 10
+        change_lbs:
+          Math.round(
+            (lastWeight.weight_kg - firstWeight.weight_kg) * 2.205 * 10,
+          ) / 10,
       };
     }
   }
@@ -320,25 +370,26 @@ analyticsRoutes.get('/summary', async (c) => {
     habits: habitStats,
     whoop: whoopStats,
     barrys: barrysStats,
-    weight_change: weightChange
+    weight_change: weightChange,
   });
 });
 
 /**
  * Get weight history
  */
-analyticsRoutes.get('/weight', async (c) => {
-  const userId = c.req.header('X-User-Id');
+analyticsRoutes.get("/weight", async (c) => {
+  const userId = c.req.header("X-User-Id");
   if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const days = parseInt(c.req.query('days') || '90');
+  const days = parseInt(c.req.query("days") || "90");
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split("T")[0];
 
-  const weights = await c.env.DB.prepare(`
+  const weights = await c.env.DB.prepare(
+    `
     SELECT 
       date,
       weight_kg,
@@ -346,11 +397,14 @@ analyticsRoutes.get('/weight', async (c) => {
     FROM whoop_daily 
     WHERE user_id = ? AND date >= ? AND weight_kg IS NOT NULL
     ORDER BY date ASC
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   return c.json({
     period: { days, start_date: startDateStr },
-    weights: weights.results
+    weights: weights.results,
   });
 });
 
@@ -358,19 +412,20 @@ analyticsRoutes.get('/weight', async (c) => {
  * Get correlations between habits and outcomes
  * e.g., Does drinking affect recovery score?
  */
-analyticsRoutes.get('/correlations', async (c) => {
-  const userId = c.req.header('X-User-Id');
+analyticsRoutes.get("/correlations", async (c) => {
+  const userId = c.req.header("X-User-Id");
   if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const days = parseInt(c.req.query('days') || '90');
+  const days = parseInt(c.req.query("days") || "90");
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split("T")[0];
 
   // Recovery when drinking vs not drinking
-  const drinkingVsRecovery = await c.env.DB.prepare(`
+  const drinkingVsRecovery = await c.env.DB.prepare(
+    `
     SELECT 
       CASE WHEN h.drinks_count > 0 THEN 'drank' ELSE 'sober' END as status,
       ROUND(AVG(w.recovery_score), 1) as avg_recovery,
@@ -381,10 +436,14 @@ analyticsRoutes.get('/correlations', async (c) => {
     JOIN whoop_daily w ON h.date = w.date AND h.user_id = w.user_id
     WHERE h.user_id = ? AND h.date >= ?
     GROUP BY CASE WHEN h.drinks_count > 0 THEN 'drank' ELSE 'sober' END
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   // Recovery when smoking vs not smoking
-  const weedVsRecovery = await c.env.DB.prepare(`
+  const weedVsRecovery = await c.env.DB.prepare(
+    `
     SELECT 
       CASE WHEN h.smoked_weed = 1 THEN 'smoked' ELSE 'clean' END as status,
       ROUND(AVG(w.recovery_score), 1) as avg_recovery,
@@ -395,10 +454,14 @@ analyticsRoutes.get('/correlations', async (c) => {
     JOIN whoop_daily w ON h.date = w.date AND h.user_id = w.user_id
     WHERE h.user_id = ? AND h.date >= ?
     GROUP BY CASE WHEN h.smoked_weed = 1 THEN 'smoked' ELSE 'clean' END
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   // Barry's day vs non-Barry's day strain/recovery
-  const barrysEffect = await c.env.DB.prepare(`
+  const barrysEffect = await c.env.DB.prepare(
+    `
     SELECT 
       CASE WHEN b.id IS NOT NULL THEN 'barrys_day' ELSE 'rest_day' END as day_type,
       ROUND(AVG(w.day_strain), 1) as avg_strain,
@@ -408,34 +471,38 @@ analyticsRoutes.get('/correlations', async (c) => {
     LEFT JOIN barrys_workouts b ON w.date = b.workout_date AND w.user_id = b.user_id
     WHERE w.user_id = ? AND w.date >= ?
     GROUP BY CASE WHEN b.id IS NOT NULL THEN 'barrys_day' ELSE 'rest_day' END
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   return c.json({
     period: { days, start_date: startDateStr },
     correlations: {
       alcohol_vs_recovery: drinkingVsRecovery.results,
       weed_vs_recovery: weedVsRecovery.results,
-      barrys_effect: barrysEffect.results
-    }
+      barrys_effect: barrysEffect.results,
+    },
   });
 });
 
 /**
  * Weekly summary - great for seeing patterns
  */
-analyticsRoutes.get('/weekly', async (c) => {
-  const userId = c.req.header('X-User-Id');
+analyticsRoutes.get("/weekly", async (c) => {
+  const userId = c.req.header("X-User-Id");
   if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const weeks = parseInt(c.req.query('weeks') || '12');
+  const weeks = parseInt(c.req.query("weeks") || "12");
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - (weeks * 7));
-  const startDateStr = startDate.toISOString().split('T')[0];
+  startDate.setDate(startDate.getDate() - weeks * 7);
+  const startDateStr = startDate.toISOString().split("T")[0];
 
   // Weekly nutrition
-  const weeklyNutrition = await c.env.DB.prepare(`
+  const weeklyNutrition = await c.env.DB.prepare(
+    `
     SELECT 
       strftime('%Y-W%W', meal_date) as week,
       MIN(meal_date) as week_start,
@@ -453,10 +520,14 @@ analyticsRoutes.get('/weekly', async (c) => {
     )
     GROUP BY strftime('%Y-W%W', meal_date)
     ORDER BY week ASC
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   // Weekly habits
-  const weeklyHabits = await c.env.DB.prepare(`
+  const weeklyHabits = await c.env.DB.prepare(
+    `
     SELECT 
       strftime('%Y-W%W', date) as week,
       MIN(date) as week_start,
@@ -467,10 +538,14 @@ analyticsRoutes.get('/weekly', async (c) => {
     WHERE user_id = ? AND date >= ?
     GROUP BY strftime('%Y-W%W', date)
     ORDER BY week ASC
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   // Weekly Barry's
-  const weeklyBarrys = await c.env.DB.prepare(`
+  const weeklyBarrys = await c.env.DB.prepare(
+    `
     SELECT 
       strftime('%Y-W%W', workout_date) as week,
       MIN(workout_date) as week_start,
@@ -479,10 +554,14 @@ analyticsRoutes.get('/weekly', async (c) => {
     WHERE user_id = ? AND workout_date >= ?
     GROUP BY strftime('%Y-W%W', workout_date)
     ORDER BY week ASC
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   // Weekly Whoop averages
-  const weeklyWhoop = await c.env.DB.prepare(`
+  const weeklyWhoop = await c.env.DB.prepare(
+    `
     SELECT 
       strftime('%Y-W%W', date) as week,
       MIN(date) as week_start,
@@ -493,13 +572,16 @@ analyticsRoutes.get('/weekly', async (c) => {
     WHERE user_id = ? AND date >= ?
     GROUP BY strftime('%Y-W%W', date)
     ORDER BY week ASC
-  `).bind(userId, startDateStr).all();
+  `,
+  )
+    .bind(userId, startDateStr)
+    .all();
 
   return c.json({
     period: { weeks, start_date: startDateStr },
     weekly_nutrition: weeklyNutrition.results,
     weekly_habits: weeklyHabits.results,
     weekly_barrys: weeklyBarrys.results,
-    weekly_whoop: weeklyWhoop.results
+    weekly_whoop: weeklyWhoop.results,
   });
 });

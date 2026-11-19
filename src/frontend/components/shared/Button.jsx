@@ -1,21 +1,21 @@
 const variantClasses = {
-  default: 'btn',
-  mint: 'btn',
-  lavender: 'btn btn-lavender',
-  peach: 'btn btn-peach',
-  sky: 'btn btn-sky',
-  blush: 'btn btn-blush',
-  dark: 'btn btn-dark',
-}
+  default: "btn",
+  mint: "btn",
+  lavender: "btn btn-lavender",
+  peach: "btn btn-peach",
+  sky: "btn btn-sky",
+  blush: "btn btn-blush",
+  dark: "btn btn-dark",
+};
 
-export default function Button({ 
-  variant = 'default', 
-  className = '', 
-  children, 
+export default function Button({
+  variant = "default",
+  className = "",
+  children,
   disabled = false,
-  type = 'button',
+  type = "button",
   onClick,
-  ...props 
+  ...props
 }) {
   return (
     <button
@@ -27,5 +27,5 @@ export default function Button({
     >
       {children}
     </button>
-  )
+  );
 }

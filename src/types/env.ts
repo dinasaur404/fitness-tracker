@@ -1,67 +1,67 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import type { AgentNamespace } from 'agents';
-import type { UserAgent } from '../agents/UserAgent';
-import type { ChatAgent } from '../agents/ChatAgent';
+import type { AgentNamespace } from "agents";
+import type { UserAgent } from "../agents/UserAgent";
+import type { ChatAgent } from "../agents/ChatAgent";
 
 // Cloudflare bindings type definitions
 export interface Env {
   // D1 Database - historical data storage
   DB: D1Database;
-  
+
   // R2 Bucket for photos
   PHOTOS: R2Bucket;
-  
+
   // KV Namespaces
   SESSIONS: KVNamespace;
   CACHE: KVNamespace;
-  
+
   // Workers AI (for embeddings only, LLM via AI Gateway)
   AI: Ai;
-  
+
   // Vectorize Index
   FOOD_INDEX: VectorizeIndex;
-  
+
   // Analytics Engine
   ANALYTICS: AnalyticsEngineDataset;
-  
+
   // Browser Rendering (for recipe scraping, optional)
   BROWSER?: Fetcher;
-  
+
   // Queues (legacy, kept for backward compatibility - will remove in v4)
   WHOOP_QUEUE?: Queue;
   PHOTO_QUEUE?: Queue;
-  
+
   // UserAgent - Cloudflare Agents SDK (one agent per user)
   // Handles: meals, workouts, habits, streaks, scheduling
   // Using AgentNamespace<UserAgent> for proper RPC typing
   USER_AGENT: AgentNamespace<UserAgent>;
-  
+
   // ChatAgent - AI fitness coach with tool calls
   // Handles: chat history, AI responses with data lookups
   CHAT_AGENT: AgentNamespace<ChatAgent>;
-  
+
   // Legacy Durable Objects (kept for migration, will be removed in v4)
   DAILY_TRACKER: DurableObjectNamespace;
   STREAK_MANAGER: DurableObjectNamespace;
   DAILY_TRACKER_V2: DurableObjectNamespace;
   STREAK_MANAGER_V2: DurableObjectNamespace;
-  
+
   // Environment variables
   WHOOP_CLIENT_ID: string;
   WHOOP_CLIENT_SECRET: string;
   JWT_SECRET: string;
-  
+
   // AI Gateway (Unified Billing)
   CF_API_TOKEN?: string;
-  
+
   // Optional: Direct API Keys (if not using unified billing)
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
-  
+
   // Assets
   ASSETS: Fetcher;
-  
+
   // TODO: Code Mode bindings (once DO support is ready)
   // LOADER: WorkerLoader;
   // SELF: Fetcher;
@@ -95,13 +95,13 @@ export interface Meal {
   user_id: string;
   name: string;
   description?: string;
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack";
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
   photo_url?: string;
-  source: 'manual' | 'photo_ai' | 'recipe_import' | 'quick_add';
+  source: "manual" | "photo_ai" | "recipe_import" | "quick_add";
   logged_at: string;
   created_at: string;
 }
@@ -186,7 +186,14 @@ export interface DailyHabits {
 }
 
 // Streaks
-export type StreakType = 'no_drinks' | 'no_weed' | 'workout' | 'calorie_goal' | 'protein_goal' | 'water_goal' | 'barrys';
+export type StreakType =
+  | "no_drinks"
+  | "no_weed"
+  | "workout"
+  | "calorie_goal"
+  | "protein_goal"
+  | "water_goal"
+  | "barrys";
 
 export interface Streak {
   type: StreakType;
@@ -199,33 +206,33 @@ export interface Streak {
 export interface DailySummary {
   date: string;
   user_id: string;
-  
+
   // Nutrition
   total_calories: number;
   total_protein: number;
   total_carbs: number;
   total_fat: number;
   meals_logged: number;
-  
+
   // Exercise
   workouts_completed: number;
   total_calories_burned: number;
   total_strain: number;
   day_strain?: number;
   barrys_completed: boolean;
-  
+
   // Recovery (from Whoop)
   recovery_score?: number;
   sleep_score?: number;
   sleep_hours?: number;
   hrv?: number;
   resting_hr?: number;
-  
+
   // Weight (from Whoop body measurement)
   weight?: number;
   weight_kg?: number;
   body_fat?: number;
-  
+
   // Habits
   drinks_count: number;
   smoked_weed: boolean;
@@ -233,14 +240,14 @@ export interface DailySummary {
   water_bottles: number;
   took_electrolytes: boolean;
   steps?: number;
-  
+
   // Streaks
   streaks: Streak[];
-  
+
   // Goals hit
   calorie_goal_hit: boolean;
   protein_goal_hit: boolean;
-  
+
   updated_at: string;
 }
 
@@ -248,13 +255,13 @@ export interface DailySummary {
 export interface WhoopSyncMessage {
   user_id: string;
   whoop_access_token: string;
-  sync_type: 'full' | 'incremental';
+  sync_type: "full" | "incremental";
 }
 
 export interface PhotoAnalysisMessage {
   user_id: string;
   photo_key: string;
-  analysis_type: 'food' | 'progress';
+  analysis_type: "food" | "progress";
 }
 
 // Analytics events

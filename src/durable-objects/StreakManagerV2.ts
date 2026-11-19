@@ -1,20 +1,27 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { DurableObject } from 'cloudflare:workers';
+import { DurableObject } from "cloudflare:workers";
 
 /**
  * StreakManagerV2 Durable Object - SQLite-backed
- * 
+ *
  * Tracks and manages user streaks across different habits/goals.
  * Each user gets their own instance keyed by `userId`
- * 
+ *
  * Benefits of SQLite storage:
  * - Query streak history for trends
  * - Analyze patterns (which days do you usually break streaks?)
  * - Calculate statistics efficiently
  */
 
-type StreakType = 'no_drinks' | 'no_weed' | 'workout' | 'calorie_goal' | 'protein_goal' | 'water_goal' | 'barrys';
+type StreakType =
+  | "no_drinks"
+  | "no_weed"
+  | "workout"
+  | "calorie_goal"
+  | "protein_goal"
+  | "water_goal"
+  | "barrys";
 
 interface Streak {
   type: StreakType;
@@ -23,7 +30,15 @@ interface Streak {
   last_achieved_date: string;
 }
 
-const STREAK_TYPES: StreakType[] = ['no_drinks', 'no_weed', 'workout', 'calorie_goal', 'protein_goal', 'water_goal', 'barrys'];
+const STREAK_TYPES: StreakType[] = [
+  "no_drinks",
+  "no_weed",
+  "workout",
+  "calorie_goal",
+  "protein_goal",
+  "water_goal",
+  "barrys",
+];
 
 export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
   private sql: SqlStorage;
@@ -32,7 +47,7 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
   constructor(ctx: DurableObjectState, env: Record<string, unknown>) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
-    
+
     // Block requests until initialization completes
     ctx.blockConcurrencyWhile(async () => {
       this.migrate();
@@ -53,15 +68,15 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
         last_achieved_date TEXT
       )
     `);
-    
+
     // Initialize all streak types if not present
     for (const type of STREAK_TYPES) {
       this.sql.exec(
         `INSERT OR IGNORE INTO streaks (type, current_count, best_count) VALUES (?, 0, 0)`,
-        type
+        type,
       );
     }
-    
+
     // Streak history table - for trends analysis
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS streak_history (
@@ -74,7 +89,7 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
         UNIQUE(streak_type, date)
       )
     `);
-    
+
     // Daily checkins table - raw daily data
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS daily_checkins (
@@ -89,17 +104,21 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
         created_at TEXT NOT NULL
       )
     `);
-    
+
     // Indexes
-    this.sql.exec(`CREATE INDEX IF NOT EXISTS idx_history_type_date ON streak_history(streak_type, date)`);
-    this.sql.exec(`CREATE INDEX IF NOT EXISTS idx_history_date ON streak_history(date)`);
+    this.sql.exec(
+      `CREATE INDEX IF NOT EXISTS idx_history_type_date ON streak_history(streak_type, date)`,
+    );
+    this.sql.exec(
+      `CREATE INDEX IF NOT EXISTS idx_history_date ON streak_history(date)`,
+    );
   }
 
   /**
    * Load user ID from KV
    */
   private async loadUserId(): Promise<void> {
-    this.userId = await this.ctx.storage.get<string>('userId') || null;
+    this.userId = (await this.ctx.storage.get<string>("userId")) || null;
   }
 
   /**
@@ -107,17 +126,20 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    */
   private getAllStreaks(): Record<StreakType, Streak> {
     const rows = this.sql.exec(`SELECT * FROM streaks`).toArray();
-    const streaks: Record<StreakType, Streak> = {} as Record<StreakType, Streak>;
-    
+    const streaks: Record<StreakType, Streak> = {} as Record<
+      StreakType,
+      Streak
+    >;
+
     for (const row of rows) {
       streaks[row.type as StreakType] = {
         type: row.type as StreakType,
         current_count: row.current_count as number,
         best_count: row.best_count as number,
-        last_achieved_date: (row.last_achieved_date as string) || ''
+        last_achieved_date: (row.last_achieved_date as string) || "",
       };
     }
-    
+
     return streaks;
   }
 
@@ -126,12 +148,12 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    */
   private isConsecutive(lastDate: string, currentDate: string): boolean {
     if (!lastDate) return true;
-    
+
     const last = new Date(lastDate);
     const current = new Date(currentDate);
     const diffTime = current.getTime() - last.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays === 1;
   }
 
@@ -144,29 +166,37 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
 
     try {
       switch (request.method) {
-        case 'GET':
-          if (path === '/streaks') return this.handleGetAllStreaks();
-          if (path.startsWith('/streak/')) {
-            const type = path.split('/')[2] as StreakType;
+        case "GET":
+          if (path === "/streaks") return this.handleGetAllStreaks();
+          if (path.startsWith("/streak/")) {
+            const type = path.split("/")[2] as StreakType;
             return this.handleGetStreak(type);
           }
-          if (path === '/history') return this.handleGetHistory(url.searchParams);
-          if (path === '/checkins') return this.handleGetCheckins(url.searchParams);
-          if (path === '/stats') return this.handleGetStats();
+          if (path === "/history")
+            return this.handleGetHistory(url.searchParams);
+          if (path === "/checkins")
+            return this.handleGetCheckins(url.searchParams);
+          if (path === "/stats") return this.handleGetStats();
           break;
-        
-        case 'POST':
-          if (path === '/init') return this.handleInit(await request.json());
-          if (path === '/check-day') return this.handleCheckDay(await request.json());
-          if (path === '/reset') return this.handleResetStreak(await request.json());
-          if (path === '/increment') return this.handleIncrement(await request.json());
+
+        case "POST":
+          if (path === "/init") return this.handleInit(await request.json());
+          if (path === "/check-day")
+            return this.handleCheckDay(await request.json());
+          if (path === "/reset")
+            return this.handleResetStreak(await request.json());
+          if (path === "/increment")
+            return this.handleIncrement(await request.json());
           break;
       }
 
-      return new Response('Not Found', { status: 404 });
+      return new Response("Not Found", { status: 404 });
     } catch (error) {
-      console.error('StreakManagerV2 error:', error);
-      return Response.json({ error: 'Internal error', details: String(error) }, { status: 500 });
+      console.error("StreakManagerV2 error:", error);
+      return Response.json(
+        { error: "Internal error", details: String(error) },
+        { status: 500 },
+      );
     }
   }
 
@@ -175,8 +205,8 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    */
   private async handleInit(data: { userId: string }): Promise<Response> {
     this.userId = data.userId;
-    await this.ctx.storage.put('userId', data.userId);
-    
+    await this.ctx.storage.put("userId", data.userId);
+
     return Response.json({ success: true, streaks: this.getAllStreaks() });
   }
 
@@ -191,17 +221,19 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    * Get specific streak
    */
   private handleGetStreak(type: StreakType): Response {
-    const row = this.sql.exec(`SELECT * FROM streaks WHERE type = ?`, type).toArray()[0];
-    
+    const row = this.sql
+      .exec(`SELECT * FROM streaks WHERE type = ?`, type)
+      .toArray()[0];
+
     if (!row) {
-      return Response.json({ error: 'Streak type not found' }, { status: 404 });
+      return Response.json({ error: "Streak type not found" }, { status: 404 });
     }
-    
+
     return Response.json({
       type: row.type,
       current_count: row.current_count,
       best_count: row.best_count,
-      last_achieved_date: row.last_achieved_date || ''
+      last_achieved_date: row.last_achieved_date || "",
     });
   }
 
@@ -209,26 +241,26 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    * Get streak history with optional filters
    */
   private handleGetHistory(params: URLSearchParams): Response {
-    const type = params.get('type');
-    const days = parseInt(params.get('days') || '90');
+    const type = params.get("type");
+    const days = parseInt(params.get("days") || "90");
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
-    
+    const startDateStr = startDate.toISOString().split("T")[0];
+
     let query = `
       SELECT streak_type, date, achieved, count_at_date 
       FROM streak_history 
       WHERE date >= ?
     `;
     const bindings: (string | number)[] = [startDateStr];
-    
+
     if (type) {
       query += ` AND streak_type = ?`;
       bindings.push(type);
     }
-    
+
     query += ` ORDER BY date DESC`;
-    
+
     const history = this.sql.exec(query, ...bindings).toArray();
     return Response.json(history);
   }
@@ -237,17 +269,22 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    * Get daily checkins
    */
   private handleGetCheckins(params: URLSearchParams): Response {
-    const days = parseInt(params.get('days') || '30');
+    const days = parseInt(params.get("days") || "30");
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
-    
-    const checkins = this.sql.exec(`
+    const startDateStr = startDate.toISOString().split("T")[0];
+
+    const checkins = this.sql
+      .exec(
+        `
       SELECT * FROM daily_checkins 
       WHERE date >= ? 
       ORDER BY date DESC
-    `, startDateStr).toArray();
-    
+    `,
+        startDateStr,
+      )
+      .toArray();
+
     return Response.json(checkins);
   }
 
@@ -256,17 +293,27 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    */
   private handleGetStats(): Response {
     // Best streaks ever
-    const bestStreaks = this.sql.exec(`
+    const bestStreaks = this.sql
+      .exec(
+        `
       SELECT type, best_count FROM streaks ORDER BY best_count DESC
-    `).toArray();
-    
+    `,
+      )
+      .toArray();
+
     // Days tracked
-    const totalDays = this.sql.exec(`
+    const totalDays = this.sql
+      .exec(
+        `
       SELECT COUNT(DISTINCT date) as count FROM daily_checkins
-    `).toArray()[0] as { count: number };
-    
+    `,
+      )
+      .toArray()[0] as { count: number };
+
     // Success rates per streak type
-    const successRates = this.sql.exec(`
+    const successRates = this.sql
+      .exec(
+        `
       SELECT 
         streak_type,
         COUNT(*) as total_days,
@@ -274,61 +321,84 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
         ROUND(SUM(achieved) * 100.0 / COUNT(*), 1) as success_rate
       FROM streak_history
       GROUP BY streak_type
-    `).toArray();
-    
+    `,
+      )
+      .toArray();
+
     // Longest streaks from history
     const longestStreaks: Record<string, number> = {};
     for (const type of STREAK_TYPES) {
-      const maxCount = this.sql.exec(`
+      const maxCount = this.sql
+        .exec(
+          `
         SELECT MAX(count_at_date) as max_count 
         FROM streak_history 
         WHERE streak_type = ? AND achieved = 1
-      `, type).toArray()[0] as { max_count: number };
+      `,
+          type,
+        )
+        .toArray()[0] as { max_count: number };
       longestStreaks[type] = maxCount?.max_count || 0;
     }
-    
+
     return Response.json({
       best_streaks: bestStreaks,
       total_days_tracked: totalDays.count,
       success_rates: successRates,
-      longest_streaks: longestStreaks
+      longest_streaks: longestStreaks,
     });
   }
 
   /**
    * Increment a specific streak
    */
-  private async handleIncrement(data: { type?: StreakType; date: string }): Promise<Response> {
-    const type = data.type || 'barrys';
-    
+  private async handleIncrement(data: {
+    type?: StreakType;
+    date: string;
+  }): Promise<Response> {
+    const type = data.type || "barrys";
+
     // Get current streak
-    const current = this.sql.exec(`SELECT * FROM streaks WHERE type = ?`, type).toArray()[0];
+    const current = this.sql
+      .exec(`SELECT * FROM streaks WHERE type = ?`, type)
+      .toArray()[0];
     if (!current) {
-      return Response.json({ error: 'Invalid streak type' }, { status: 400 });
+      return Response.json({ error: "Invalid streak type" }, { status: 400 });
     }
-    
+
     const lastDate = current.last_achieved_date as string;
     const isConsecutive = this.isConsecutive(lastDate, data.date);
-    
+
     const newCount = isConsecutive ? (current.current_count as number) + 1 : 1;
     const newBest = Math.max(newCount, current.best_count as number);
-    
+
     // Update streak
     this.sql.exec(
       `UPDATE streaks SET current_count = ?, best_count = ?, last_achieved_date = ? WHERE type = ?`,
-      newCount, newBest, data.date, type
+      newCount,
+      newBest,
+      data.date,
+      type,
     );
-    
+
     // Record in history
     this.sql.exec(
       `INSERT OR REPLACE INTO streak_history (streak_type, date, achieved, count_at_date, created_at)
        VALUES (?, ?, 1, ?, ?)`,
-      type, data.date, newCount, new Date().toISOString()
+      type,
+      data.date,
+      newCount,
+      new Date().toISOString(),
     );
-    
+
     return Response.json({
       success: true,
-      streak: { type, current_count: newCount, best_count: newBest, last_achieved_date: data.date }
+      streak: {
+        type,
+        current_count: newCount,
+        best_count: newBest,
+        last_achieved_date: data.date,
+      },
     });
   }
 
@@ -346,7 +416,7 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
     hit_water_goal: boolean;
   }): Promise<Response> {
     const today = data.date;
-    
+
     // Save daily checkin
     this.sql.exec(
       `INSERT OR REPLACE INTO daily_checkins 
@@ -361,45 +431,58 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
       data.hit_calorie_goal ? 1 : 0,
       data.hit_protein_goal ? 1 : 0,
       data.hit_water_goal ? 1 : 0,
-      new Date().toISOString()
+      new Date().toISOString(),
     );
 
     // Update each streak
     const updateStreak = (type: StreakType, achieved: boolean) => {
-      const current = this.sql.exec(`SELECT * FROM streaks WHERE type = ?`, type).toArray()[0];
+      const current = this.sql
+        .exec(`SELECT * FROM streaks WHERE type = ?`, type)
+        .toArray()[0];
       const lastDate = current?.last_achieved_date as string;
-      
+
       let newCount: number;
       if (achieved) {
-        newCount = this.isConsecutive(lastDate, today) ? (current?.current_count as number || 0) + 1 : 1;
+        newCount = this.isConsecutive(lastDate, today)
+          ? ((current?.current_count as number) || 0) + 1
+          : 1;
       } else {
         newCount = 0;
       }
-      
-      const newBest = Math.max(newCount, current?.best_count as number || 0);
-      const newLastDate = achieved ? today : (current?.last_achieved_date as string || '');
-      
+
+      const newBest = Math.max(newCount, (current?.best_count as number) || 0);
+      const newLastDate = achieved
+        ? today
+        : (current?.last_achieved_date as string) || "";
+
       this.sql.exec(
         `UPDATE streaks SET current_count = ?, best_count = ?, last_achieved_date = ? WHERE type = ?`,
-        newCount, newBest, newLastDate, type
+        newCount,
+        newBest,
+        newLastDate,
+        type,
       );
-      
+
       // Record in history
       this.sql.exec(
         `INSERT OR REPLACE INTO streak_history (streak_type, date, achieved, count_at_date, created_at)
          VALUES (?, ?, ?, ?, ?)`,
-        type, today, achieved ? 1 : 0, newCount, new Date().toISOString()
+        type,
+        today,
+        achieved ? 1 : 0,
+        newCount,
+        new Date().toISOString(),
       );
     };
 
     // Update streaks based on day's data
-    updateStreak('no_drinks', !data.drank_alcohol);
-    updateStreak('no_weed', !data.smoked_weed);
-    updateStreak('workout', data.worked_out);
-    updateStreak('barrys', data.did_barrys);
-    updateStreak('calorie_goal', data.hit_calorie_goal);
-    updateStreak('protein_goal', data.hit_protein_goal);
-    updateStreak('water_goal', data.hit_water_goal);
+    updateStreak("no_drinks", !data.drank_alcohol);
+    updateStreak("no_weed", !data.smoked_weed);
+    updateStreak("workout", data.worked_out);
+    updateStreak("barrys", data.did_barrys);
+    updateStreak("calorie_goal", data.hit_calorie_goal);
+    updateStreak("protein_goal", data.hit_protein_goal);
+    updateStreak("water_goal", data.hit_water_goal);
 
     const streaks = this.getAllStreaks();
     const celebrations = this.getCelebrations(streaks);
@@ -410,19 +493,26 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
   /**
    * Reset a specific streak
    */
-  private async handleResetStreak(data: { type: StreakType }): Promise<Response> {
-    this.sql.exec(`UPDATE streaks SET current_count = 0 WHERE type = ?`, data.type);
-    
-    const updated = this.sql.exec(`SELECT * FROM streaks WHERE type = ?`, data.type).toArray()[0];
-    
+  private async handleResetStreak(data: {
+    type: StreakType;
+  }): Promise<Response> {
+    this.sql.exec(
+      `UPDATE streaks SET current_count = 0 WHERE type = ?`,
+      data.type,
+    );
+
+    const updated = this.sql
+      .exec(`SELECT * FROM streaks WHERE type = ?`, data.type)
+      .toArray()[0];
+
     return Response.json({
       success: true,
       streak: {
         type: data.type,
         current_count: 0,
         best_count: updated?.best_count || 0,
-        last_achieved_date: updated?.last_achieved_date || ''
-      }
+        last_achieved_date: updated?.last_achieved_date || "",
+      },
     });
   }
 
@@ -436,7 +526,9 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
     for (const [type, streak] of Object.entries(streaks)) {
       if (milestones.includes(streak.current_count)) {
         const name = this.getStreakName(type as StreakType);
-        celebrations.push(`${streak.current_count} day ${name} streak! You're crushing it!`);
+        celebrations.push(
+          `${streak.current_count} day ${name} streak! You're crushing it!`,
+        );
       }
     }
 
@@ -447,9 +539,13 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
       if (days === 1) {
         celebrations.push("Day 1 of your 2026 resolution! You've got this!");
       } else if (days === 7) {
-        celebrations.push("One week weed-free! Your resolution is going strong!");
+        celebrations.push(
+          "One week weed-free! Your resolution is going strong!",
+        );
       } else if (days === 30) {
-        celebrations.push("30 DAYS! You've proven you can do this. Incredible willpower!");
+        celebrations.push(
+          "30 DAYS! You've proven you can do this. Incredible willpower!",
+        );
       }
     }
 
@@ -458,13 +554,13 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
 
   private getStreakName(type: StreakType): string {
     const names: Record<StreakType, string> = {
-      no_drinks: 'alcohol-free',
-      no_weed: 'weed-free',
-      workout: 'workout',
-      calorie_goal: 'calorie goal',
-      protein_goal: 'protein goal',
-      water_goal: 'hydration',
-      barrys: "Barry's"
+      no_drinks: "alcohol-free",
+      no_weed: "weed-free",
+      workout: "workout",
+      calorie_goal: "calorie goal",
+      protein_goal: "protein goal",
+      water_goal: "hydration",
+      barrys: "Barry's",
     };
     return names[type] || type;
   }
@@ -473,6 +569,6 @@ export class StreakManagerV2 extends DurableObject<Record<string, unknown>> {
    * Alarm handler
    */
   async alarm(): Promise<void> {
-    console.log('StreakManagerV2 alarm fired');
+    console.log("StreakManagerV2 alarm fired");
   }
 }

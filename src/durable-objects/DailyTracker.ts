@@ -1,18 +1,18 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { DurableObject } from 'cloudflare:workers';
+import { DurableObject } from "cloudflare:workers";
 
 /**
  * DailyTracker Durable Object - KV-backed
- * 
+ *
  * Manages real-time daily statistics for a user.
  * Each user gets their own instance keyed by `userId:date`
- * 
+ *
  * This enables:
  * - Real-time macro tracking as meals are logged
  * - Instant goal progress without DB queries
  * - Per-entity scheduled tasks via alarms
- * 
+ *
  * Storage: KV-backed (not SQLite - existing DOs can't be migrated)
  */
 
@@ -93,13 +93,13 @@ interface DailyData {
 
 export class DailyTracker extends DurableObject<Record<string, unknown>> {
   private initialized: boolean = false;
-  
+
   // In-memory cache for fast reads
   private cachedData: DailyData | null = null;
 
   constructor(ctx: DurableObjectState, env: Record<string, unknown>) {
     super(ctx, env);
-    
+
     // Block requests until initialization completes
     ctx.blockConcurrencyWhile(async () => {
       await this.loadFromStorage();
@@ -110,7 +110,7 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
    * Load cached data from KV storage
    */
   private async loadFromStorage(): Promise<void> {
-    const stored = await this.ctx.storage.get<DailyData>('data');
+    const stored = await this.ctx.storage.get<DailyData>("data");
     if (stored) {
       this.cachedData = stored;
       this.initialized = true;
@@ -123,8 +123,8 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
   private getDefaultData(): DailyData {
     return {
       summary: {
-        date: new Date().toISOString().split('T')[0],
-        user_id: '',
+        date: new Date().toISOString().split("T")[0],
+        user_id: "",
         total_calories: 0,
         total_protein: 0,
         total_carbs: 0,
@@ -138,14 +138,20 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
         smoked_weed: false,
         water_bottles: 0,
         took_electrolytes: false,
-        goals: { calories: 1800, protein: 135, carbs: 180, fat: 60, water_bottles: 3 },
+        goals: {
+          calories: 1800,
+          protein: 135,
+          carbs: 180,
+          fat: 60,
+          water_bottles: 3,
+        },
         calorie_goal_hit: false,
         protein_goal_hit: false,
         water_goal_hit: false,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       },
       meals: [],
-      workouts: []
+      workouts: [],
     };
   }
 
@@ -189,16 +195,16 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
     if (this.cachedData) {
       const summary = this.cachedData.summary;
       summary.updated_at = new Date().toISOString();
-      
+
       // Check goal progress
       const goals = summary.goals;
-      summary.calorie_goal_hit = 
-        summary.total_calories >= goals.calories * 0.9 && 
+      summary.calorie_goal_hit =
+        summary.total_calories >= goals.calories * 0.9 &&
         summary.total_calories <= goals.calories * 1.1;
       summary.protein_goal_hit = summary.total_protein >= goals.protein;
       summary.water_goal_hit = summary.water_bottles >= goals.water_bottles;
-      
-      await this.ctx.storage.put('data', this.cachedData);
+
+      await this.ctx.storage.put("data", this.cachedData);
     }
   }
 
@@ -211,64 +217,72 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
 
     try {
       switch (request.method) {
-        case 'GET':
-          if (path === '/summary') return this.handleGetSummary();
-          if (path === '/meals') return this.handleGetMeals();
+        case "GET":
+          if (path === "/summary") return this.handleGetSummary();
+          if (path === "/meals") return this.handleGetMeals();
           break;
-        
-        case 'POST':
-          if (path === '/init') return this.handleInit(await request.json());
-          if (path === '/meal') return this.handleAddMeal(await request.json());
-          if (path === '/workout') return this.handleAddWorkout(await request.json());
-          if (path === '/habits') return this.handleUpdateHabits(await request.json());
-          if (path === '/recovery') return this.handleUpdateRecovery(await request.json());
-          if (path === '/weight') return this.handleUpdateWeight(await request.json());
+
+        case "POST":
+          if (path === "/init") return this.handleInit(await request.json());
+          if (path === "/meal") return this.handleAddMeal(await request.json());
+          if (path === "/workout")
+            return this.handleAddWorkout(await request.json());
+          if (path === "/habits")
+            return this.handleUpdateHabits(await request.json());
+          if (path === "/recovery")
+            return this.handleUpdateRecovery(await request.json());
+          if (path === "/weight")
+            return this.handleUpdateWeight(await request.json());
           break;
-        
-        case 'DELETE':
-          if (path === '/meal') return this.handleRemoveMeal(await request.json());
+
+        case "DELETE":
+          if (path === "/meal")
+            return this.handleRemoveMeal(await request.json());
           break;
       }
 
-      return new Response('Not Found', { status: 404 });
+      return new Response("Not Found", { status: 404 });
     } catch (error) {
-      console.error('DailyTracker error:', error);
-      return Response.json({ error: 'Internal error' }, { status: 500 });
+      console.error("DailyTracker error:", error);
+      return Response.json({ error: "Internal error" }, { status: 500 });
     }
   }
 
   /**
    * Initialize the DO with user and date identity
    */
-  private async handleInit(data: { 
-    date: string; 
-    user_id: string; 
+  private async handleInit(data: {
+    date: string;
+    user_id: string;
     goals?: Partial<DailyGoals>;
     existingData?: Partial<DailySummary>;
   }): Promise<Response> {
     // Store identity
-    await this.ctx.storage.put('userId', data.user_id);
-    await this.ctx.storage.put('date', data.date);
-    
+    await this.ctx.storage.put("userId", data.user_id);
+    await this.ctx.storage.put("date", data.date);
+
     // Initialize or update data
     const currentData = this.getData();
     currentData.summary.date = data.date;
     currentData.summary.user_id = data.user_id;
-    
+
     // Merge goals if provided
     if (data.goals) {
-      currentData.summary.goals = { ...currentData.summary.goals, ...data.goals };
+      currentData.summary.goals = {
+        ...currentData.summary.goals,
+        ...data.goals,
+      };
     }
-    
+
     // Merge existing data (from D1 on startup)
     if (data.existingData) {
       Object.assign(currentData.summary, data.existingData);
     }
-    
+
     this.cachedData = currentData;
     this.initialized = true;
     await this.saveData();
-    
+
     // Schedule end-of-day alarm for streak calculation (11:59 PM)
     const endOfDay = new Date(data.date);
     endOfDay.setHours(23, 59, 0, 0);
@@ -278,7 +292,7 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
         await this.ctx.storage.setAlarm(endOfDay.getTime());
       }
     }
-    
+
     return Response.json(currentData.summary);
   }
 
@@ -286,8 +300,11 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
    * Alarm handler - runs at end of day for streak updates
    */
   async alarm(): Promise<void> {
-    console.log('DailyTracker alarm fired for date:', this.cachedData?.summary.date);
-    
+    console.log(
+      "DailyTracker alarm fired for date:",
+      this.cachedData?.summary.date,
+    );
+
     // The alarm can trigger streak calculations or daily summaries
     // For now, we just ensure the data is saved
     if (this.cachedData) {
@@ -327,9 +344,9 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
   }): Promise<Response> {
     const mealId = meal.id || crypto.randomUUID();
     const now = new Date().toISOString();
-    
+
     const data = this.getData();
-    
+
     // Add meal to array
     const newMeal: MealEntry = {
       id: mealId,
@@ -339,51 +356,62 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
       protein: meal.protein,
       carbs: meal.carbs,
       fat: meal.fat,
-      logged_at: now
+      logged_at: now,
     };
-    
+
     data.meals.push(newMeal);
-    
+
     // Update totals
     data.summary.total_calories += meal.calories;
     data.summary.total_protein += meal.protein;
     data.summary.total_carbs += meal.carbs;
     data.summary.total_fat += meal.fat;
     data.summary.meals_logged = data.meals.length;
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json({ id: mealId, summary: data.summary });
   }
 
   /**
    * Remove a meal
    */
-  private async handleRemoveMeal(reqData: { mealId: string }): Promise<Response> {
+  private async handleRemoveMeal(reqData: {
+    mealId: string;
+  }): Promise<Response> {
     const data = this.getData();
-    
+
     // Find meal
-    const mealIndex = data.meals.findIndex(m => m.id === reqData.mealId);
+    const mealIndex = data.meals.findIndex((m) => m.id === reqData.mealId);
     if (mealIndex === -1) {
-      return Response.json({ error: 'Meal not found' }, { status: 404 });
+      return Response.json({ error: "Meal not found" }, { status: 404 });
     }
-    
+
     const meal = data.meals[mealIndex];
-    
+
     // Remove from array
     data.meals.splice(mealIndex, 1);
-    
+
     // Update totals
-    data.summary.total_calories = Math.max(0, data.summary.total_calories - meal.calories);
-    data.summary.total_protein = Math.max(0, data.summary.total_protein - meal.protein);
-    data.summary.total_carbs = Math.max(0, data.summary.total_carbs - meal.carbs);
+    data.summary.total_calories = Math.max(
+      0,
+      data.summary.total_calories - meal.calories,
+    );
+    data.summary.total_protein = Math.max(
+      0,
+      data.summary.total_protein - meal.protein,
+    );
+    data.summary.total_carbs = Math.max(
+      0,
+      data.summary.total_carbs - meal.carbs,
+    );
     data.summary.total_fat = Math.max(0, data.summary.total_fat - meal.fat);
     data.summary.meals_logged = data.meals.length;
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json({ success: true, summary: data.summary });
   }
 
@@ -402,22 +430,22 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
   }): Promise<Response> {
     const workoutId = workout.id || crypto.randomUUID();
     const now = new Date().toISOString();
-    
+
     const data = this.getData();
-    
+
     // Check if workout already exists (update if so)
-    const existingIndex = data.workouts.findIndex(w => w.id === workoutId);
-    
+    const existingIndex = data.workouts.findIndex((w) => w.id === workoutId);
+
     const newWorkout: WorkoutEntry = {
       id: workoutId,
-      type: workout.type || 'general',
+      type: workout.type || "general",
       calories_burned: workout.calories_burned,
       strain: workout.strain,
       is_barrys: workout.is_barrys || false,
       is_double_floor: workout.is_double_floor || false,
-      logged_at: now
+      logged_at: now,
     };
-    
+
     if (existingIndex >= 0) {
       // Update existing
       data.workouts[existingIndex] = newWorkout;
@@ -425,20 +453,20 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
       // Add new
       data.workouts.push(newWorkout);
     }
-    
+
     // Update summary
     if (workout.workout_count !== undefined) {
       data.summary.workouts_completed = workout.workout_count;
     } else if (existingIndex < 0) {
       data.summary.workouts_completed += 1;
     }
-    
+
     // Recalculate workout totals
     let totalCaloriesBurned = 0;
     let totalStrain = 0;
     let hasBarrys = false;
     let isDoubleFloor = false;
-    
+
     for (const w of data.workouts) {
       totalCaloriesBurned += w.calories_burned;
       totalStrain += w.strain;
@@ -447,19 +475,19 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
         isDoubleFloor = w.is_double_floor;
       }
     }
-    
+
     data.summary.total_calories_burned = totalCaloriesBurned;
     data.summary.total_strain = totalStrain;
     data.summary.barrys_completed = hasBarrys;
     data.summary.is_double_floor = isDoubleFloor;
-    
+
     if (workout.day_strain !== undefined) {
       data.summary.day_strain = workout.day_strain;
     }
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json({ id: workoutId, summary: data.summary });
   }
 
@@ -474,16 +502,20 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
     steps?: number;
   }): Promise<Response> {
     const data = this.getData();
-    
-    if (habits.drinks_count !== undefined) data.summary.drinks_count = habits.drinks_count;
-    if (habits.smoked_weed !== undefined) data.summary.smoked_weed = habits.smoked_weed;
-    if (habits.water_bottles !== undefined) data.summary.water_bottles = habits.water_bottles;
-    if (habits.took_electrolytes !== undefined) data.summary.took_electrolytes = habits.took_electrolytes;
+
+    if (habits.drinks_count !== undefined)
+      data.summary.drinks_count = habits.drinks_count;
+    if (habits.smoked_weed !== undefined)
+      data.summary.smoked_weed = habits.smoked_weed;
+    if (habits.water_bottles !== undefined)
+      data.summary.water_bottles = habits.water_bottles;
+    if (habits.took_electrolytes !== undefined)
+      data.summary.took_electrolytes = habits.took_electrolytes;
     if (habits.steps !== undefined) data.summary.steps = habits.steps;
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json(data.summary);
   }
 
@@ -499,20 +531,23 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
     weight_kg?: number;
   }): Promise<Response> {
     const data = this.getData();
-    
+
     data.summary.recovery_score = recovery.recovery_score;
-    if (recovery.sleep_score !== undefined) data.summary.sleep_score = recovery.sleep_score;
+    if (recovery.sleep_score !== undefined)
+      data.summary.sleep_score = recovery.sleep_score;
     if (recovery.hrv !== undefined) data.summary.hrv = recovery.hrv;
-    if (recovery.resting_hr !== undefined) data.summary.resting_hr = recovery.resting_hr;
-    if (recovery.sleep_hours !== undefined) data.summary.sleep_hours = recovery.sleep_hours;
+    if (recovery.resting_hr !== undefined)
+      data.summary.resting_hr = recovery.resting_hr;
+    if (recovery.sleep_hours !== undefined)
+      data.summary.sleep_hours = recovery.sleep_hours;
     if (recovery.weight_kg !== undefined) {
       data.summary.weight_kg = recovery.weight_kg;
       data.summary.weight = Math.round(recovery.weight_kg * 2.205 * 10) / 10;
     }
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json(data.summary);
   }
 
@@ -524,15 +559,15 @@ export class DailyTracker extends DurableObject<Record<string, unknown>> {
     weight_kg?: number;
   }): Promise<Response> {
     const data = this.getData();
-    
+
     data.summary.weight = weight.weight;
     if (weight.weight_kg !== undefined) {
       data.summary.weight_kg = weight.weight_kg;
     }
-    
+
     this.cachedData = data;
     await this.saveData();
-    
+
     return Response.json(data.summary);
   }
 }
