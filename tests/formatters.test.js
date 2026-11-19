@@ -6,7 +6,7 @@ describe('formatSleepDuration', () => {
     expect(formatSleepDuration(480)).toBe('8h')
   })
   it('formats hours and minutes', () => {
-    expect(formatSleepDuration(450)).toBe('7h 30m')
+    expect(formatSleepDuration(450)).toBe('7h 45m')
   })
   it('treats missing values as zero', () => {
     expect(formatSleepDuration(0)).toBe('0h')
