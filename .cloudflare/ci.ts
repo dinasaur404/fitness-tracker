@@ -2,6 +2,8 @@
 // from the pushed commit and runs it with step.dynamic(). Edit it like any code.
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import prettyMilliseconds from "pretty-ms";
+import { z } from "zod";
+const Result = z.object({ passed: z.boolean(), checks: z.array(z.object({ name: z.string(), exitCode: z.number() }).passthrough()) });
 
 type Output = Awaited<ReturnType<WorkflowStep["runner"]>>["outputs"][string];
 type RepoEvent = { sha: string; mr: number | null; checkout: Output };
@@ -49,6 +51,6 @@ export class Pipeline extends WorkflowEntrypoint<unknown, RepoEvent> {
 			}),
 		);
 
-		return { passed: checks.every((check) => check.exitCode === 0), checks };
+		return Result.parse({ passed: checks.every((check) => check.exitCode === 0), checks });
 	}
 }
