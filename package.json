@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "AI-powered fitness & nutrition tracker built on Cloudflare",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:api": "wrangler dev",
