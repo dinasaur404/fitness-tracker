@@ -35,9 +35,9 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 		const project = [checkout, install.outputs.modules];
 
 		const checks = await Promise.all(
-			["typecheck", "build"].map(async (name) => {
+			["typecheck", "build", "deps"].map(async (name) => {
 				const result = await step.runner(name, NO_RETRIES, {
-					command: `cd repo && timeout 540 npm run ${name}`,
+					command: name === "deps" ? "cd repo && timeout 120 npm ls --omit=dev --depth=0" : `cd repo && timeout 540 npm run ${name}`,
 					inputs: project,
 					env: ENV,
 					instanceSize: SIZE,
