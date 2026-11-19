@@ -1,0 +1,6 @@
+{
+  "name": "fitness-tracker-ci",
+  "private": true,
+  "type": "module",
+  "dependencies": { "pretty-ms": "^9.2.0" }
+}

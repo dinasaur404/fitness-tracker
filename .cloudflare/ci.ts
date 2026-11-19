@@ -1,6 +1,7 @@
 // This repository's CI pipeline. A fixed Cloudflare CI pipeline loads this file
 // from the pushed commit and runs it with step.dynamic(). Edit it like any code.
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
+import prettyMilliseconds from "pretty-ms";
 
 type Output = Awaited<ReturnType<WorkflowStep["runner"]>>["outputs"][string];
 type RepoEvent = { sha: string; mr: number | null; checkout: Output };
@@ -36,6 +37,7 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 
 		const checks = await Promise.all(
 			["typecheck", "build", "deps"].map(async (name) => {
+				const started = Date.now();
 				const result = await step.runner(name, NO_RETRIES, {
 					command: name === "deps" ? "cd repo && timeout 120 npm ls --omit=dev --depth=0" : `cd repo && timeout 540 npm run ${name}`,
 					inputs: project,
@@ -43,7 +45,7 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 					instanceSize: SIZE,
 					allowFailure: true,
 				});
-				return { name, exitCode: result.exitCode, log: tail(result.logs) };
+				return { name, exitCode: result.exitCode, took: prettyMilliseconds(Date.now() - started), log: tail(result.logs) };
 			}),
 		);
 
