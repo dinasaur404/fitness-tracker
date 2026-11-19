@@ -33,6 +33,7 @@ const NPM = { NPM_CONFIG_UPDATE_NOTIFIER: "false" };
 export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 	async run(event: WorkflowEvent<RepoEvent>, step: CIStep) {
 		const { checkout } = event.payload;
+		const pkg = JSON.parse((await step.readFile("package.json")) ?? "{}");
 
 		const install = await step.runner("install dependencies", NO_RETRIES, {
 			command: "cd repo && npm ci",
@@ -43,9 +44,13 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 		const project = [checkout, install.outputs.modules];
 
 		const checks = await Promise.all(
-			["typecheck", "build"].map(async (name) => {
+			["typecheck", "build", "deps"].map(async (name) => {
 				const result = await step.runner(name, NO_RETRIES, {
-					command: `cd repo && npm run ${name}`,
+					command:
+						name === "deps"
+							? "git --version && cd repo && npm ls --omit=dev --depth=0"
+							: `cd repo && npm run ${name}`,
+					image: name === "deps" ? "workflows/node" : undefined,
 					inputs: project,
 					env: NPM,
 					allowFailure: true,
@@ -58,6 +63,6 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 			}),
 		);
 
-		return { passed: checks.every((check) => check.exitCode === 0), checks };
+		return { passed: checks.every((check) => check.exitCode === 0), package: pkg.name, checks };
 	}
 }
