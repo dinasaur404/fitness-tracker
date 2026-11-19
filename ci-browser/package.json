@@ -1,0 +1,13 @@
+{
+  "name": "ci-browser",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway browser smoke + a11y test for the ci-try/browser-tests experiment",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "playwright": "^1.65.1"
+  }
+}
