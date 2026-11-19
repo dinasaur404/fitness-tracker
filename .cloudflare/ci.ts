@@ -35,6 +35,33 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 		const { checkout } = event.payload;
 		const pkg = JSON.parse((await step.readFile("package.json")) ?? "{}");
 
+		// Round 3 verification: each of these should be refused by the pipeline's CIStep.
+		const refused: Record<string, string> = {};
+		const attempt = async (label: string, run: () => Promise<unknown>) => {
+			try {
+				await run();
+				refused[label] = "allowed";
+			} catch (err) {
+				refused[label] = String((err as Error)?.message ?? err);
+			}
+		};
+		await attempt("standard-4", () =>
+			step.runner("too big", NO_RETRIES, { command: "nproc", instanceSize: "standard-4" }),
+		);
+		await attempt("own image", () =>
+			step.runner("own image", NO_RETRIES, {
+				command: "true",
+				image: { repository: "my-toolchain", digest: `sha256:${"0".repeat(64)}` },
+			}),
+		);
+		await attempt("forged input", () =>
+			step.runner("forged input", NO_RETRIES, {
+				command: "true",
+				inputs: [{ ...checkout, data: { ref: "forged", file: null } }],
+			}),
+		);
+		await attempt("dynamic", () => (step as any).dynamic("nested", {}, { event: {} }));
+
 		const install = await step.runner("install dependencies", NO_RETRIES, {
 			command: "cd repo && npm ci",
 			inputs: [checkout],
@@ -63,6 +90,6 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 			}),
 		);
 
-		return { passed: checks.every((check) => check.exitCode === 0), package: pkg.name, checks };
+		return { passed: checks.every((check) => check.exitCode === 0), package: pkg.name, refused, checks };
 	}
 }
