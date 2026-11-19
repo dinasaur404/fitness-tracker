@@ -37,6 +37,7 @@ export class CI extends WorkflowEntrypoint<unknown, RepoEvent> {
 
 		const install = await step.runner("install dependencies", NO_RETRIES, {
 			command: "cd repo && npm ci",
+			instanceSize: "standard-4",
 			inputs: [checkout],
 			env: NPM,
 			outputs: { modules: "repo/node_modules" },
