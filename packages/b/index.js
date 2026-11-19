@@ -1,3 +1,3 @@
 export function shout(text) {
-  return `${String(text).toUpperCase()}!`;
+  return `${String(text).trim().toUpperCase()}!`;
 }
