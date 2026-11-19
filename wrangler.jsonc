@@ -130,7 +130,8 @@
   
   // Environment variables
   "vars": {
-    "WHOOP_CLIENT_ID": "ceae83bf-7b41-4cb9-a1ec-2dfdc521c76b"
+    "WHOOP_CLIENT_ID": "ceae83bf-7b41-4cb9-a1ec-2dfdc521c76b",
+    "CI_TRY_FEATURE_FLAG": "on"
   },
 
   // Hourly cron for Whoop token refresh & data sync
