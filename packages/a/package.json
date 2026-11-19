@@ -1,0 +1,10 @@
+{
+  "name": "@ci-try/a",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/"
+  }
+}
