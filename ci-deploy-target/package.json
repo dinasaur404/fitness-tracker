@@ -1,0 +1,11 @@
+{
+  "name": "ci-try-deploy-target",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "wrangler": "4.165.0"
+  }
+}
